@@ -12,6 +12,46 @@ class MoviesController < ApplicationController
 
   def index
     @movies = Movie.all
+    sort = params[:sort] || session[:sort]
+
+    @all_ratings = Movie.all.select('rating').distinct
+    @selected_ratings = []
+
+	if params[:commit] == "Refresh"
+	  if params[:ratings] != nil
+		@selected_ratings = params[:ratings].keys
+		session[:selected_ratings] = @selected_ratings 
+	  end
+	end
+	if session[:selected_ratings].nil?
+		@all_ratings.each do |f|
+			@selected_ratings << f.rating
+		end
+	else
+		@selected_ratings = session[:selected_ratings]
+	end 
+      @movies = Movie.where(rating: @selected_ratings)
+    case sort
+    when 'title'
+      ordering,@title_header = {:order => :title}, 'hilite'
+      @movies = Movie.where(rating: @selected_ratings).order("title ASC").all
+    when 'release_date'
+      ordering,@date_header = {:order => :release_date}, 'hilite'
+      @movies = Movie.where(rating: @selected_ratings).order("release_date ASC").all
+    end
+
+	if params[:sort] != session[:sort]
+		session[:sort] = sort
+		flash.keep
+		redirect_to :sort=>sort, :ratings=>@selected_ratings and return
+	end
+
+	if params[:ratings] != session[:ratings] and @selected_tatings != {}
+		session[:sort] = sort
+		session[:ratings] = @selected_ratings
+		flash.keep
+		redirect_to :sort=>sort, :ratings=>@selected_ratings and return
+	end
   end
 
   def new
